@@ -1,0 +1,48 @@
+name: Check and Rename Markdown Files
+
+on:
+  push:
+    branches:
+      - main   # or any branch you want
+
+jobs:
+  rename-md:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to push changes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: sudo apt-get install -y rename
+
+      - name: Rename markdown files if needed
+        run: |
+          changed_files=$(git diff --name-only HEAD~1 HEAD -- '*.md')
+
+          for file in $changed_files; do
+            filename=$(basename "$file")
+            dir=$(dirname "$file")
+
+            if [[ ! "$filename" =~ ^[0-9]+-.*\.md$ ]]; then
+              timestamp=$(date +%s)
+              newfile="${dir}/${timestamp}-${filename}"
+
+              echo "Renaming $file -> $newfile"
+              git mv "$file" "$newfile"
+            fi
+          done
+
+      - name: Commit and push changes
+        if: success()
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "Auto-rename markdown files with timestamp"
+            git push
+          fi
