@@ -3,7 +3,7 @@ name: Check and Rename Markdown Files
 on:
   push:
     branches:
-      - main   # or any branch you want
+      - main   # adjust to your branch
 
 jobs:
   rename-md:
@@ -17,12 +17,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install dependencies
-        run: sudo apt-get install -y rename
-
-      - name: Rename markdown files if needed
+      - name: Find and rename markdown files
         run: |
-          changed_files=$(git diff --name-only HEAD~1 HEAD -- '*.md')
+          changed_files=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} -- '*.md')
 
           for file in $changed_files; do
             filename=$(basename "$file")
@@ -38,7 +35,6 @@ jobs:
           done
 
       - name: Commit and push changes
-        if: success()
         run: |
           if [[ -n "$(git status --porcelain)" ]]; then
             original_message=$(git log -1 --pretty=%B)
