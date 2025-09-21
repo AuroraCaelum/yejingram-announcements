@@ -17,12 +17,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install dependencies
-        run: sudo apt-get install -y rename
-
       - name: Rename markdown files if needed
         run: |
           changed_files=$(git diff --name-only HEAD~1 HEAD -- '*.md')
+          need_commit=false
 
           for file in $changed_files; do
             filename=$(basename "$file")
@@ -34,15 +32,19 @@ jobs:
 
               echo "Renaming $file -> $newfile"
               git mv "$file" "$newfile"
+              need_commit=true
             fi
           done
 
+          echo "need_commit=$need_commit" >> $GITHUB_ENV
+
       - name: Commit and push changes
-        if: success()
+        if: env.need_commit == 'true'
         run: |
-          if [[ -n "$(git status --porcelain)" ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -m "Auto-rename markdown files with timestamp"
-            git push
-          fi
+          original_message=$(git log -1 --pretty=%B)
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git commit -m "$original_message"
+          git push
