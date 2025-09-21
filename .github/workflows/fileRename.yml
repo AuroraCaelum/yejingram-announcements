@@ -27,18 +27,24 @@ jobs:
 
       - name: Find and rename markdown files
         run: |
+          export LANG=en_US.UTF-8
+          export LC_ALL=en_US.UTF-8
+          set -euo pipefail
+          
           changed_files=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} -- '*.md')
-
+          
           for file in $changed_files; do
-            filename=$(basename "$file")
-            dir=$(dirname "$file")
-
-            if [[ ! "$filename" =~ ^[0-9]+-.*\.md$ ]]; then
-              timestamp=$(date +%s)
-              newfile="${dir}/${timestamp}-${filename}"
-
-              echo "Renaming $file -> $newfile"
-              git mv "$file" "$newfile"
+            if [[ -f "$file" ]]; then
+              filename=$(basename "$file")
+              dir=$(dirname "$file")
+              if [[ ! "$filename" =~ ^[0-9]+-.*\.md$ ]]; then
+                timestamp=$(date +%s)
+                newfile="${dir}/${timestamp}-${filename}"
+                echo "Renaming $file -> $newfile"
+                git mv "$file" "$newfile"
+              fi
+            else
+              echo "File $file does not exist, skipping."
             fi
           done
 
